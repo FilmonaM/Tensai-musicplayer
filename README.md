@@ -1,101 +1,68 @@
 # Tensai Music Player
 
-A modern desktop music player built with Tauri, featuring a dark minimalist interface and comprehensive music management capabilities.
+A modern desktop music player built with Tauri. Simple, fast, and completely offline.
+
+## Download
+
+### Windows
+- Download the `.exe` file from the latest release
+- No installation required - just run the executable
+
+### macOS
+- Download the `.dmg` file from the latest release
+- Drag to Applications folder to install
+
+### Linux
+- Download the `.AppImage` file from the latest release
+- Make executable: `chmod +x tensai-musicplayer.AppImage`
+- Run: `./tensai-musicplayer.AppImage`
 
 ## Features
 
-### File Format Support
-- Audio: MP3, M4A, WAV, FLAC, OGG
-- Video: MP4 (with automatic thumbnail extraction at 5-second mark)
+- **Dark minimalist interface** - Pure black background with clean design
+- **Local music library** - Scan and organize your music files
+- **Playlist support** - Create and manage playlists
+- **Metadata extraction** - Automatically reads artist and album info
+- **Offline only** - No internet required, everything stored locally
+- **Cross-platform** - Works on Windows, macOS, and Linux
 
-### Music Management
-- Direct file access mode
-- Watch folder mode with automatic import
-- Managed library mode with file organization
+## Supported Formats
 
-### Playback Features
-- Standard controls (play, pause, next, previous)
-- Volume control with slider
-- Progress bar with seek functionality
-- Shuffle and repeat modes
-- Queue management with drag and drop support
-- Gapless playback option
-
-### Library Organization
-- Grid view with album artwork
-- Recently added and recently played sections
-- Context menus for all items
-- Inline rename functionality
-- Custom artwork editing
-
-### Playlist System
-- Create unlimited playlists
-- Add/remove songs with checkbox interface
-- Custom playlist covers
-- Playlist expansion view
-- Quick playlist creation
-
-### User Interface
-- Pure black background with minimal design
-- Aldrich font throughout
-- Icon-only sidebar navigation
-- Keyboard shortcuts
-- Responsive grid layouts
-
-## Building from Source
-
-### Prerequisites
-- Node.js (LTS version)
-- Rust (stable toolchain)
-- Platform-specific dependencies:
-  - Windows: WebView2 (usually pre-installed)
-  - macOS: Xcode Command Line Tools
-  - Linux: webkit2gtk, libappindicator
-
-### Development
-```bash
-git clone https://github.com/yourusername/tensai-musicplayer
-cd tensai-musicplayer
-npm install
-npm run dev
-```
-
-### Production Build
-```bash
-npm run build
-```
-
-The built executables will be in `src-tauri/target/release/bundle/`
-
-## Distribution
-
-### Windows
-- Installer: `tensai-musicplayer_x.x.x_x64_en-US.msi`
-- Portable: `tensai-musicplayer.exe`
-
-### macOS
-- DMG: `tensai-musicplayer_x.x.x_x64.dmg`
-- App Bundle: `tensai-musicplayer.app`
-
-### Linux
-- AppImage: `tensai-musicplayer_x.x.x_amd64.AppImage`
-- Debian: `tensai-musicplayer_x.x.x_amd64.deb`
+- **Audio**: MP3, M4A, WAV, FLAC, OGG
+- **Video**: MP4 (audio extraction)
 
 ## Usage
 
-1. Launch the application
-2. Click "ADD FILES" to import music
-3. Right-click any track for context options
-4. Create playlists from the Playlists tab
-5. Access settings from the gear icon
+1. **Launch the app**
+2. **Add music** - Click "ADD FILES" to import music from your computer
+3. **Create playlists** - Organize your music into playlists
+4. **Play music** - Use the player controls at the bottom
 
-## Storage
+## Data Storage
 
-The application stores data in:
-- Windows: `%APPDATA%/tensai-musicplayer`
-- macOS: `~/Library/Application Support/tensai-musicplayer`
-- Linux: `~/.config/tensai-musicplayer`
+The app stores all data locally in CSV files:
+- Music library information
+- Playlists and song lists
+- Play counts and recently played
+
+No internet connection required - everything works offline.
+
+## Building from Source
+
+If you want to build from source:
+
+```bash
+# Prerequisites
+# - Node.js (LTS)
+# - Rust (stable)
+
+# Clone and build
+git clone https://github.com/yourusername/tensai-musicplayer
+cd tensai-musicplayer
+npm install
+npm run build
+```
 
 ## License
 
-MIT License - see LICENSE file for details
+MIT License

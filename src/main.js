@@ -2,20 +2,21 @@ import './storage.js';
 import './player.js';
 import './ui.js';
 
+// Global application state - holds all data
 const state = {
-    library: [],
-    playlists: [],
-    recentlyPlayed: [],
-    queue: [],
-    currentIndex: 0,
-    shuffle: false,
-    repeat: false,
-    currentView: 'home',
-    contextItem: null,
-    deleteItem: null,
-    renameItem: null,
-    editImageItem: null,
-    shuffleOrder: [],
+    library: [],           // All music files
+    playlists: [],         // User-created playlists
+    recentlyPlayed: [],    // Recently played tracks
+    queue: [],            // Current playback queue
+    currentIndex: 0,      // Currently playing track index
+    shuffle: false,       // Shuffle mode
+    repeat: false,        // Repeat mode
+    currentView: 'home',  // Current UI view
+    contextItem: null,    // Item for context menu
+    deleteItem: null,     // Item to be deleted
+    renameItem: null,     // Item to be renamed
+    editImageItem: null,  // Item for image editing
+    shuffleOrder: [],     // Shuffled queue order
     settings: {
         fileMode: 'direct',
         watchFolder: '',
@@ -26,6 +27,7 @@ const state = {
     }
 };
 
+// Audio player object - handles playback
 const player = {
     audio: null,
     currentTrack: null,
@@ -44,12 +46,15 @@ window.state = state;
 
 init();
 
+// Initialize the application
 async function init() {
     await loadState();
+    await loadLibraryFromBackend();
     setupEventListeners();
     renderAll();
     UI.updateLibraryStats(state.library);
     
+    // Setup cache clearing functionality
     const clearCacheBtn = document.getElementById('clear-cache');
     if (clearCacheBtn) {
         clearCacheBtn.addEventListener('click', () => {
@@ -84,38 +89,121 @@ async function init() {
     });
 }
 
+// Load music library from Rust backend (currently disabled)
+async function loadLibraryFromBackend() {
+    try {
+        if (window.__TAURI__) {
+            const library = await window.__TAURI__.invoke('get_library');
+            state.library = library.map(item => ({
+                ...item,
+                url: item.path, // Use file path as URL
+                type: getFileType(item.path),
+                addedDate: item.added_date * 1000 // Convert to milliseconds
+            }));
+            
+            const playlists = await window.__TAURI__.invoke('get_playlists');
+            state.playlists = playlists.map(playlist => ({
+                ...playlist,
+                created: playlist.created_date * 1000,
+                songs: playlist.songs.map(songId => 
+                    state.library.find(item => item.id === songId)
+                ).filter(Boolean)
+            }));
+            
+            const recentlyPlayed = await window.__TAURI__.invoke('get_recently_played', { limit: 10 });
+            state.recentlyPlayed = recentlyPlayed.map(item => ({
+                ...item,
+                url: item.path,
+                type: getFileType(item.path),
+                addedDate: item.added_date * 1000
+            }));
+        }
+    } catch (error) {
+        console.error('Failed to load library from backend:', error);
+    }
+}
+
+// Determine file type from extension
+function getFileType(path) {
+    const ext = path.split('.').pop()?.toLowerCase();
+    if (['mp3', 'm4a', 'wav', 'flac', 'ogg'].includes(ext)) {
+        return 'audio';
+    } else if (ext === 'mp4') {
+        return 'video';
+    }
+    return 'audio';
+}
+
+// Scan directory for music files (backend integration)
+async function scanDirectoryForMusic() {
+    try {
+        if (window.__TAURI__) {
+            const { open } = window.__TAURI__.dialog;
+            const selected = await open({
+                multiple: false,
+                directory: true,
+                title: 'Select Music Folder'
+            });
+            
+            if (selected) {
+                UI.showLoadingMessage('Scanning directory for music files...');
+                
+                // Listen for scan progress
+                const unlisten = await window.__TAURI__.event.listen('scan-progress', (event) => {
+                    UI.updateLoadingMessage(event.payload);
+                });
+                
+                const musicFiles = await window.__TAURI__.invoke('scan_directory', { 
+                    path: selected 
+                });
+                
+                unlisten();
+                UI.hideLoadingMessage();
+                
+                // Update state with new files
+                const newFiles = musicFiles.map(item => ({
+                    ...item,
+                    url: item.path,
+                    type: getFileType(item.path),
+                    addedDate: item.added_date * 1000
+                }));
+                
+                state.library = [...state.library, ...newFiles];
+                renderAll();
+                UI.updateLibraryStats(state.library);
+                
+                showSuccessMessage(`Added ${newFiles.length} music files to library`);
+            }
+        }
+    } catch (error) {
+        console.error('Failed to scan directory:', error);
+        UI.hideLoadingMessage();
+        showError('Failed to scan directory');
+    }
+}
+
 async function loadState() {
     const stored = await Storage.loadFromLocalStorage();
     if (stored) {
-        state.library = stored.library || [];
-        state.playlists = stored.playlists || [];
-        state.recentlyPlayed = stored.recentlyPlayed || [];
         state.settings = stored.settings || state.settings;
         
-        if (state.library.length > 0 && !state.library[0].url) {
-            console.log('Library items missing URLs, clearing library');
-            state.library = [];
-            state.recentlyPlayed = [];
-            await Storage.clearLibrary();
+        if (state.settings.fileMode) {
+            document.querySelector(`input[name="file-mode"][value="${state.settings.fileMode}"]`).checked = true;
+            UI.updateFileManagementUI(state.settings.fileMode);
+        }
+        
+        if (state.settings.autoPlayNext !== undefined) {
+            document.getElementById('auto-play-next').checked = state.settings.autoPlayNext;
+        }
+        
+        if (state.settings.gaplessPlayback !== undefined) {
+            document.getElementById('gapless-playback').checked = state.settings.gaplessPlayback;
         }
     }
     
     const volumeSlider = document.getElementById('volume-slider');
     if (volumeSlider) {
         volumeSlider.value = player.volume * 100;
-    }
-    
-    if (state.settings.fileMode) {
-        document.querySelector(`input[name="file-mode"][value="${state.settings.fileMode}"]`).checked = true;
-        UI.updateFileManagementUI(state.settings.fileMode);
-    }
-    
-    if (state.settings.autoPlayNext !== undefined) {
-        document.getElementById('auto-play-next').checked = state.settings.autoPlayNext;
-    }
-    
-    if (state.settings.gaplessPlayback !== undefined) {
-        document.getElementById('gapless-playback').checked = state.settings.gaplessPlayback;
     }
 }
 
@@ -129,9 +217,9 @@ function setupEventListeners() {
     setupImageEditListeners();
     setupWatchFolderSelection();
     
-    document.getElementById('file-input').addEventListener('change', handleFileSelect);
+    // Replace file input with directory scanning
     document.getElementById('add-files-btn').addEventListener('click', () => {
-        document.getElementById('file-input').click();
+        scanDirectoryForMusic();
     });
     
     document.querySelectorAll('.nav-item').forEach(item => {
